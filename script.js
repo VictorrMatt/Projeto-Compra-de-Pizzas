@@ -1,5 +1,5 @@
 let cart = [];
-let arrayOfNames = [];
+let clientPizzas = { names: [], sizes: [], prices: [] };
 let modalQt = 1;
 let modalKey = 0;
 
@@ -57,27 +57,32 @@ function closeModal() {
     c(".pizzaWindowArea").style.display = "none";
   }, 500);
 }
+
 cs(".pizzaInfo--cancelButton, .pizzaInfo--cancelMobileButton").forEach(
   (item) => {
     item.addEventListener("click", closeModal);
   }
 );
+
 c(".pizzaInfo--qtmenos").addEventListener("click", () => {
   if (modalQt > 1) {
     modalQt--;
     c(".pizzaInfo--qt").innerHTML = modalQt;
   }
 });
+
 c(".pizzaInfo--qtmais").addEventListener("click", () => {
   modalQt++;
   c(".pizzaInfo--qt").innerHTML = modalQt;
 });
+
 cs(".pizzaInfo--size").forEach((size, sizeIndex) => {
   size.addEventListener("click", (e) => {
     c(".pizzaInfo--size.selected").classList.remove("selected");
     size.classList.add("selected");
   });
 });
+
 c(".pizzaInfo--addButton").addEventListener("click", () => {
   let size = parseInt(c(".pizzaInfo--size.selected").getAttribute("data-key"));
   let identifier = pizzaJson[modalKey].id + "@" + size;
@@ -101,6 +106,7 @@ c(".menu-openner").addEventListener("click", () => {
     c("aside").style.left = "0";
   }
 });
+
 c(".menu-closer").addEventListener("click", () => {
   c("aside").style.left = "100vw";
 });
@@ -137,10 +143,8 @@ function updateCart() {
       let pizzaName = `${pizzaItem.name} (${pizzaSizeName})`;
 
       cartItem.querySelector("img").src = pizzaItem.img;
-
-      arrayOfNames.push(`${pizzaItem.name} (${pizzaSizeName}) Qt.${cart[i].qt}`);
-
       cartItem.querySelector(".cart--item-nome").innerHTML = pizzaName;
+
       cartItem.querySelector(".cart--item--qt").innerHTML = cart[i].qt;
       cartItem
         .querySelector(".cart--item-qtmenos")
@@ -161,6 +165,18 @@ function updateCart() {
 
       c(".cart").append(cartItem);
 
+      // Se o array de pizzas não tiver nenhum dado, receberá o pizzaName atual, caso contrário, se o array de pizzas não tiver o pizzaName atual, receberá
+      if (!clientPizzas.names[0]) {
+        clientPizzas.names.push(pizzaItem.name);
+        clientPizzas.sizes.push(pizzaSizeName);
+        clientPizzas.prices.push(pizzaItem.price);
+      } else {
+        if (!clientPizzas.names.includes(pizzaItem.name)) {
+          clientPizzas.names.push(pizzaItem.name);
+          clientPizzas.sizes.push(pizzaSizeName);
+          clientPizzas.prices.push(pizzaItem.price);
+        }
+      }
     }
 
     desconto = subtotal * 0.1;
@@ -175,8 +191,50 @@ function updateCart() {
   }
 }
 
-c('.cart--finalizar').addEventListener("click", () => {
-  let newArray = arrayOfNames.join("%20");
-  const url = `https://api.whatsapp.com/send?phone=556199415-6912&text=${newArray}`;
-  window.open(url, '_blank');
+/* Prepara as mensagens para envio.
+Esta função constrói a mensagem que será enviada através do WhatsApp para confirmar o pedido. */
+function preparingMessages() {
+  let friendlyMessage =
+    "Obrigado por escolher a nossa pizzaria! Seu pedido está em boas mãos e será preparado com carinho. Apreciamos muito a sua preferência.";
+  let text = [];
+
+  text.push(formattingStrings(friendlyMessage));
+  for (i in clientPizzas.names) {
+    text.push(
+      formattingStrings(
+        `${clientPizzas.names[i]} - ${clientPizzas.sizes[i]} - ${
+          cart[i].qt
+        }x = R$${(clientPizzas.prices[i] * cart[i].qt).toFixed(2)}`
+      )
+    );
+  }
+
+  return text.join("", "");
+}
+
+/* Formata strings para uso em URLs do WhatsApp. 
+Esta função substitui espaços por "%20" e adiciona "%0D" ao final para formatação correta. */
+function formattingStrings(strings) {
+  let newString = "";
+
+  for (each of strings) {
+    if (each == " ") {
+      newString += "%20";
+    } else {
+      newString += each;
+    }
+  }
+
+  return newString + "%0D";
+}
+
+c(".cart--finalizar").addEventListener("click", () => {
+  /*   Recebendo a mensagem de confirmação e abrindo a url com a mensagem personalizada */ let message =
+    preparingMessages();
+  const url = `https://api.whatsapp.com/send?phone=55619415-6912&text=${message}`;
+  window.open(url, "_blank");
+
+  setTimeout(() => {
+    window.location.reload(true);
+  }, 100);
 });
